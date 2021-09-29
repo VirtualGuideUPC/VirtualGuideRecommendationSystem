@@ -124,7 +124,7 @@ class GetSimilarPlaces(Resource):
 
     intUserId=request.json['user_id']
     strUserId=str(intUserId)
-    url="http://127.0.0.1:8000/api/reviews/user/"+strUserId
+    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/reviews/user/"+strUserId
     response = requests.request("GET", url)
     jsonresponse=response.json()
     dictresponse=to_dict(jsonresponse)
@@ -150,7 +150,7 @@ class GetSimilarSubcategories(Resource):
     
     intUserId=request.json['user_id']
     strUserId=str(intUserId)
-    url="http://127.0.0.1:8000/api/users/getSubCategories/"+strUserId
+    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getSubCategories/"+strUserId
     response=requests.request("GET",url)
     
     print(type(response.json()))
@@ -263,7 +263,7 @@ class GetSimilarUsersRecommendations(Resource):
     input_list=[]
     # for i in similar_users:
     #   strUserId=str(i)
-    #   url="http://127.0.0.1:8000/api/reviews/user"+strUserId
+    #   url="http://ec2-34-226-195-132.compute-1.amazonaws.com//api/reviews/user"+strUserId
     #   response = requests.request("GET",url)
 
     #   jsonresponse=response.json()

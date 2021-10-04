@@ -245,6 +245,15 @@ class GetSimilarUsers(Resource):
 
 api.add_resource(GetSimilarUsers,'/simus')
 
+def getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,places):
+        # API Service: historicalRatings = getHistoricalRatingsFromUsers(<userIDs[]>)
+        recommendation_list = []
+        for historicalRating in historicalRatings:
+            single_prediction = get_similar_places(historicalRating, item_similarity_matrix, 3, places)
+            for id in single_prediction[:2]:
+                recommendation_list.append(id)
+
+        return recommendation_list
 
 class GetSimilarUsersRecommendations(Resource):
   @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
@@ -257,28 +266,30 @@ class GetSimilarUsersRecommendations(Resource):
     print(similar_users)
 
 
+  
     item_similarity_matrix=pd.read_pickle('item_similarity_matrix.pkt')
     places=load_dataset('all.csv')
+    ratings = load_dataset('itemDataset.csv')
 
     input_list=[]
-    # for i in similar_users:
-    #   strUserId=str(i)
-    #   url="http://ec2-34-226-195-132.compute-1.amazonaws.com//api/reviews/user"+strUserId
-    #   response = requests.request("GET",url)
+    
+    for i in similar_users:
+      aux_df= ratings[ratings['user_id']==i]
+      aux_df=aux_df.drop('user_id',axis=1)
+      subset=aux_df[['item_id','item_rating']]
+      result=[tuple(x) for x in subset.to_numpy()]
+      outputList = [i for i in result if i[0] <=2000]
+      input_list.append(outputList)
+ 
+    result = getSimilarUsersRecommendations(input_list,item_similarity_matrix,places)
+    print(result)
 
-    #   jsonresponse=response.json()
-    #   dictresponse=to_dict(jsonresponse)
-    #   my_user_places_ratings=[]
-    #   for d in dictresponse:
-    #     thistuple=(d['touristic_place_id'],d['ranking'])
-    #     my_user_places_ratings.append(thistuple)
-    #   input_list.append(my_user_places_ratings)
+    response = {
+      'userid':intUserId,
+      'recommendations':result
+    }
 
-    print(input_list)
-
-    response= {"este servicio":"aun no esta listo"}
-
-    return response
+    return json.dumps(response)
 
 api.add_resource(GetSimilarUsersRecommendations,'/simusrec')
 
@@ -359,7 +370,7 @@ if __name__ == '__main__':
                 (123,5),
                 (12,4),
                 (399,5),
-                (222,1)
+                (222,1),
             ],
             [
                 (23,5),
@@ -379,17 +390,8 @@ if __name__ == '__main__':
 
     # NUEVO QUERY: tiene como entrada la lista de usuarios similares. Se obtiene una recomendacion de lugares en base a las recomendaciones
     #brindadas a los usuarios similares
-    def getSimilarUsersRecommendations(users):
-        # API Service: historicalRatings = getHistoricalRatingsFromUsers(<userIDs[]>)
 
-        recommendation_list = []
-        for historicalRating in historicalRatings:
-            single_prediction = get_similar_places(historicalRating, item_similarity_matrix, 3, places)
-            for id in single_prediction[:2]:
-                recommendation_list.append(id)
 
-        return recommendation_list
-
-    result = getSimilarUsersRecommendations(similar_users)
+    result = getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,places)
     print(result)
 

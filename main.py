@@ -52,16 +52,16 @@ def buildMatrices(item, subcategory, user):
 
 # Limpiar ruido (campos nulos y columnas con números de valores menor a un umbral).
 def cleanNoise(item, subcategory, user):
-    item_matrix = item.dropna(thresh=27, axis=1).fillna(0)
-    subcategory_matrix = subcategory.dropna(thresh=27, axis=1).fillna(0)
-    user_matrix = user.dropna(thresh=5, axis=1).fillna(0)
+    item_matrix = item.dropna(thresh=0, axis=1).fillna(0)
+    subcategory_matrix = subcategory.dropna(thresh=0, axis=1).fillna(0)
+    user_matrix = user.dropna(thresh=0, axis=1).fillna(0)
     return item_matrix, subcategory_matrix, user_matrix
 
 ######################## TRAINING ###############################
 # MATRIZ DE SIMILITUD (Correlación de Pearson)
 def computeSimilarityMatrices(item, subcategory, user):
     item_similarity_matrix = item.corr(method='pearson')
-    subcategory_similarity_matrix = subcategory.corr(method='pearson')
+    subcategory_similarity_matrix = subcategory.corr(method='pearson').fillna(0)
     user_similarity_matrix = user.corr(method='pearson')
 
     # GUARDAR MATRIZ EN CSV
@@ -70,6 +70,9 @@ def computeSimilarityMatrices(item, subcategory, user):
     user_similarity_matrix.to_pickle('user_similarity_matrix.pkt')
 
     return item_similarity_matrix, subcategory_similarity_matrix, user_similarity_matrix
+
+
+
 
 ################## QUERIES ################## QUERIES ################## QUERIES ################## QUERIES
 
@@ -133,46 +136,24 @@ class GetSimilarPlaces(Resource):
       thistuple=(d['touristic_place_id'],d['ranking'])
       my_user_places_ratings.append(thistuple)
 
-    recommended_places = get_similar_places(my_user_places_ratings, item_similarity_matrix, 10, places, True)
-    
-    finalresponse=recommended_places.to_json(orient='records',force_ascii=False)
+    # FAKE DATA
+    #my_user_places_ratings = [(2, 5), (4, 4), (23, 5), (25, 4)] #FAKE DATA
+
+    recommended_places = get_similar_places(my_user_places_ratings, item_similarity_matrix, 5, places, False)
+    print("Recommended Places: ", recommended_places)
+    finalresponse=json.dumps(recommended_places)
     ultimateresponse=json.loads(finalresponse)
     return jsonify(to_dict(ultimateresponse))
-    
+
+# ENDPOINT GET SIMILAR PLACES
 api.add_resource(GetSimilarPlaces, '/simplac')
 
-class GetSimilarSubcategories(Resource):
-  @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
-  def get(self):
-    
-    subcategory_similarity_matrix = pd.read_pickle('subcategory_similarity_matrix.pkt')
-    subcategories = pd.read_csv('subCategories.csv')
-    
-    intUserId=request.json['user_id']
-    strUserId=str(intUserId)
-    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getSubCategories/"+strUserId
-    response=requests.request("GET",url)
-    
-    print(type(response.json()))
-    responsedict=response.json()['subcategories']
-    
-    my_user_subcategories=[]
 
-    print(responsedict)
-    print(type(responsedict))
-    for d in responsedict:
-      print(type(d))
-      my_user_subcategories.append(d['subcategory_id'])
 
-    print(my_user_subcategories)
 
-    recommended_subCategories = get_similar_subcategories(my_user_subcategories, subcategory_similarity_matrix, 10, subcategories, True)
-    finalresponse=recommended_subCategories.to_json(orient='records',force_ascii=False)
-    ultimateresponse=json.loads(finalresponse)
-    return jsonify(to_dict(ultimateresponse))
-    
-api.add_resource(GetSimilarSubcategories, '/simsubc')
-    
+
+
+
 # Subcategorías
 
 # Recomendar subcategorías a un usuario en base al registro de sus preferencias sobre subcategorías.
@@ -210,6 +191,38 @@ def get_similar_subcategories(user_data, subcategory_similarity_matrix, size, su
       recommendation_list.append(indices[i])
     return recommendation_list
 
+class GetSimilarSubcategories(Resource):
+  @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
+  def get(self):
+    
+    subcategory_similarity_matrix = pd.read_pickle('subcategory_similarity_matrix.pkt')
+    subcategories = pd.read_csv('subCategories.csv')
+    
+    intUserId=request.json['user_id']
+    strUserId=str(intUserId)
+    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getSubCategories/"+strUserId
+    response=requests.request("GET",url)
+    
+    responsedict=response.json()['subcategories']
+    
+    my_user_subcategories=[]
+
+    for d in responsedict:
+      my_user_subcategories.append(d['subcategory_id'])
+
+    print("Recommended SubCategories: ", my_user_subcategories)
+    recommended_subCategories = get_similar_subcategories(my_user_subcategories, subcategory_similarity_matrix, 5, subcategories, False)
+    finalresponse=json.dumps(recommended_subCategories)
+    ultimateresponse=json.loads(finalresponse)
+    return jsonify(to_dict(ultimateresponse))
+
+# ENDPOINT GET SIMILAR SUBCATEGORIES
+api.add_resource(GetSimilarSubcategories, '/simsubc')
+    
+
+
+
+
 
 # Usuarios
 
@@ -224,7 +237,6 @@ def get_similar_users(user_id, user_similarity_matrix, size):
   #print(similar_score)
   similar_items = pd.DataFrame(similar_score)
   indices = similar_items.index.values.tolist()
-
   return indices[:size]
 
 class GetSimilarUsers(Resource):
@@ -236,6 +248,7 @@ class GetSimilarUsers(Resource):
     strUserId=str(intUserId)
     
     similar_users = get_similar_users(intUserId, user_similarity_matrix, 10)
+    print("Similar Users to user", intUserId, ": ", similar_users)
     response = {
       'userid':intUserId,
       'similar users':similar_users
@@ -243,8 +256,16 @@ class GetSimilarUsers(Resource):
     # response=json.dumps(similar_users)
     return json.dumps(response)
 
+# ENDPOINT GET SIMILAR USERS
 api.add_resource(GetSimilarUsers,'/simus')
 
+
+
+
+
+
+# Obtener recomendaciones a través de los 3 usuarios más similares
+# Tiene como entrada la lista de usuarios similares. Se obtiene una recomendacion de lugares en base a las recomendaciones
 def getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,places):
         # API Service: historicalRatings = getHistoricalRatingsFromUsers(<userIDs[]>)
         recommendation_list = []
@@ -252,7 +273,6 @@ def getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,plac
             single_prediction = get_similar_places(historicalRating, item_similarity_matrix, 3, places)
             for id in single_prediction[:2]:
                 recommendation_list.append(id)
-
         return recommendation_list
 
 class GetSimilarUsersRecommendations(Resource):
@@ -263,16 +283,12 @@ class GetSimilarUsersRecommendations(Resource):
     intUserId=request.json['user_id']
     similar_users=get_similar_users(intUserId,user_similarity_matrix,4)
     similar_users.pop(0)
-    print(similar_users)
 
-
-  
     item_similarity_matrix=pd.read_pickle('item_similarity_matrix.pkt')
     places=load_dataset('all.csv')
     ratings = load_dataset('itemDataset.csv')
 
     input_list=[]
-    
     for i in similar_users:
       aux_df= ratings[ratings['user_id']==i]
       aux_df=aux_df.drop('user_id',axis=1)
@@ -282,21 +298,21 @@ class GetSimilarUsersRecommendations(Resource):
       input_list.append(outputList)
  
     result = getSimilarUsersRecommendations(input_list,item_similarity_matrix,places)
-    print(result)
 
     response = {
       'userid':intUserId,
       'recommendations':result
     }
-
+    print("Recommended places to user", intUserId, "based on most similar users: ",result)
     return json.dumps(response)
 
+# ENDPOINT GET PLACES RECOMMENDATIONS BY MOST SIMILAR USERS
 api.add_resource(GetSimilarUsersRecommendations,'/simusrec')
 
 
 if __name__ == '__main__':
+    app.run(debug=True)
 
-    '''
     # FLUJO 1
     # Cargar Datasets
     df_itemDataset = load_dataset('itemDataset.csv')
@@ -388,10 +404,8 @@ if __name__ == '__main__':
     ]
 
 
-    # NUEVO QUERY: tiene como entrada la lista de usuarios similares. Se obtiene una recomendacion de lugares en base a las recomendaciones
-    #brindadas a los usuarios similares
-
-
     result = getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,places)
     print(result)
+
+    '''
 

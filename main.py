@@ -93,6 +93,20 @@ user_places_ratings = [
     (563, 1),
 ]
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 get_similar_places(usuario1, item_similarity_matrix, 10, False)
 '''
 def get_similar_places(user_data, item_similarity_matrix, size, places, tabulate=False):
@@ -122,31 +136,39 @@ def get_similar_places(user_data, item_similarity_matrix, size, places, tabulate
 class GetSimilarPlaces(Resource):
   @cors.crossdomain(origin='*', methods = {"HEAD","OPTIONS","GET","POST"})
   def get(self):
-    item_similarity_matrix = pd.read_pickle('item_similarity_matrix.pkt')
-    places = load_dataset('all.csv')
+    try:
+        item_similarity_matrix = pd.read_pickle('item_similarity_matrix.pkt')
+        places = load_dataset('all.csv')
 
-    intUserId=request.json['user_id']
-    strUserId=str(intUserId)
-    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/reviews/user/"+strUserId
-    response = requests.request("GET", url)
-    jsonresponse=response.json()
-    dictresponse=to_dict(jsonresponse)
-    my_user_places_ratings=[]
-    for d in dictresponse:
-      thistuple=(d['touristic_place_id'],d['ranking'])
-      my_user_places_ratings.append(thistuple)
+        intUserId=request.json['user_id']
+        strUserId=str(intUserId)
+        url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/reviews/user/"+strUserId
+        response = requests.request("GET", url)
+        jsonresponse=response.json()
+        dictresponse=to_dict(jsonresponse)
+        my_user_places_ratings=[]
+        for d in dictresponse:
+          thistuple=(d['touristic_place_id'],d['ranking'])
+          my_user_places_ratings.append(thistuple)
 
-    # FAKE DATA
-    #my_user_places_ratings = [(2, 5), (4, 4), (23, 5), (25, 4)] #FAKE DATA
+        # FAKE DATA
+        #my_user_places_ratings = [(2, 5), (4, 4), (23, 5), (25, 4)] #FAKE DATA
 
-    recommended_places = get_similar_places(my_user_places_ratings, item_similarity_matrix, 5, places, False)
-    print("Recommended Places: ", recommended_places)
-    finalresponse=json.dumps(recommended_places)
-    ultimateresponse=json.loads(finalresponse)
-    return jsonify(to_dict(ultimateresponse))
+        recommended_places = get_similar_places(my_user_places_ratings, item_similarity_matrix, 20, places, False)
+        print("Recommended Places: ", recommended_places)
+        finalresponse=json.dumps(recommended_places)
+        ultimateresponse=json.loads(finalresponse)
+        return jsonify(to_dict(ultimateresponse))
+    except:
+        print("Could not fetch Similar Touristic Places")
+        return "Could not fetch Similar Touristic Places"
 
 # ENDPOINT GET SIMILAR PLACES
 api.add_resource(GetSimilarPlaces, '/simplac')
+
+
+
+
 
 
 
@@ -194,31 +216,45 @@ def get_similar_subcategories(user_data, subcategory_similarity_matrix, size, su
 class GetSimilarSubcategories(Resource):
   @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
   def get(self):
-    
-    subcategory_similarity_matrix = pd.read_pickle('subcategory_similarity_matrix.pkt')
-    subcategories = pd.read_csv('subCategories.csv')
-    
-    intUserId=request.json['user_id']
-    strUserId=str(intUserId)
-    url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getSubCategories/"+strUserId
-    response=requests.request("GET",url)
-    
-    responsedict=response.json()['subcategories']
-    
-    my_user_subcategories=[]
 
-    for d in responsedict:
-      my_user_subcategories.append(d['subcategory_id'])
+    try:
+        subcategory_similarity_matrix = pd.read_pickle('subcategory_similarity_matrix.pkt')
 
-    print("Recommended SubCategories: ", my_user_subcategories)
-    recommended_subCategories = get_similar_subcategories(my_user_subcategories, subcategory_similarity_matrix, 5, subcategories, False)
-    finalresponse=json.dumps(recommended_subCategories)
-    ultimateresponse=json.loads(finalresponse)
-    return jsonify(to_dict(ultimateresponse))
+        # TODO: endpoint para obtener las subcategorias existentes en la base de datos
+        subcategories = pd.read_csv('subCategories.csv')
+
+        intUserId=request.json['user_id']
+        strUserId=str(intUserId)
+        url="http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getSubCategories/"+strUserId
+        response=requests.request("GET",url)
+
+        responsedict=response.json()['subcategories']
+
+        my_user_subcategories=[]
+
+        for d in responsedict:
+          my_user_subcategories.append(d['subcategory_id'])
+
+        print("Recommended SubCategories: ", my_user_subcategories)
+        recommended_subCategories = get_similar_subcategories(my_user_subcategories, subcategory_similarity_matrix, 5, subcategories, False)
+        finalresponse=json.dumps(recommended_subCategories)
+        ultimateresponse=json.loads(finalresponse)
+        return jsonify(to_dict(ultimateresponse))
+    except:
+        print("Could not fetch Similar SubCategories")
+        return "Could not fetch Similar SubCategories"
 
 # ENDPOINT GET SIMILAR SUBCATEGORIES
 api.add_resource(GetSimilarSubcategories, '/simsubc')
     
+
+
+
+
+
+
+
+
 
 
 
@@ -242,22 +278,36 @@ def get_similar_users(user_id, user_similarity_matrix, size):
 class GetSimilarUsers(Resource):
   @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
   def get(self):
-    user_similarity_matrix = pd.read_pickle('user_similarity_matrix.pkt')
+      try:
+        user_similarity_matrix = pd.read_pickle('user_similarity_matrix.pkt')
 
-    intUserId=request.json['user_id']
-    strUserId=str(intUserId)
-    
-    similar_users = get_similar_users(intUserId, user_similarity_matrix, 10)
-    print("Similar Users to user", intUserId, ": ", similar_users)
-    response = {
-      'userid':intUserId,
-      'similar users':similar_users
-    }
-    # response=json.dumps(similar_users)
-    return json.dumps(response)
+        intUserId=request.json['user_id']
+        strUserId=str(intUserId)
+
+        similar_users = get_similar_users(intUserId, user_similarity_matrix, 10)
+        print("Similar Users to user", intUserId, ": ", similar_users)
+        response = {
+          'userid':intUserId,
+          'similar users':similar_users
+        }
+        # response=json.dumps(similar_users)
+        return json.dumps(response)
+      except:
+          print("Could not fetch Similar Users")
+          return "Could not fetch Similar Users"
+
 
 # ENDPOINT GET SIMILAR USERS
 api.add_resource(GetSimilarUsers,'/simus')
+
+
+
+
+
+
+
+
+
 
 
 
@@ -276,43 +326,108 @@ def getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,plac
         return recommendation_list
 
 class GetSimilarUsersRecommendations(Resource):
-  @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
-  def get(self):
-    user_similarity_matrix = pd.read_pickle('user_similarity_matrix.pkt')
+    @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
+    def get(self):
 
-    intUserId=request.json['user_id']
-    similar_users=get_similar_users(intUserId,user_similarity_matrix,4)
-    similar_users.pop(0)
+        try:
+            user_similarity_matrix = pd.read_pickle('user_similarity_matrix.pkt')
 
-    item_similarity_matrix=pd.read_pickle('item_similarity_matrix.pkt')
-    places=load_dataset('all.csv')
-    ratings = load_dataset('itemDataset.csv')
+            intUserId=request.json['user_id']
+            similar_users=get_similar_users(intUserId,user_similarity_matrix,4)
+            similar_users.pop(0)
 
-    input_list=[]
-    for i in similar_users:
-      aux_df= ratings[ratings['user_id']==i]
-      aux_df=aux_df.drop('user_id',axis=1)
-      subset=aux_df[['item_id','item_rating']]
-      result=[tuple(x) for x in subset.to_numpy()]
-      outputList = [i for i in result if i[0] <=2000]
-      input_list.append(outputList)
- 
-    result = getSimilarUsersRecommendations(input_list,item_similarity_matrix,places)
+            item_similarity_matrix=pd.read_pickle('item_similarity_matrix.pkt')
+            places=load_dataset('all.csv')
+            ratings = load_dataset('itemDataset.csv')
 
-    response = {
-      'userid':intUserId,
-      'recommendations':result
-    }
-    print("Recommended places to user", intUserId, "based on most similar users: ",result)
-    return json.dumps(response)
+            input_list=[]
+            for i in similar_users:
+                aux_df= ratings[ratings['user_id']==i]
+                aux_df=aux_df.drop('user_id',axis=1)
+                subset=aux_df[['item_id','item_rating']]
+                result=[tuple(x) for x in subset.to_numpy()]
+                outputList = [i for i in result if i[0] <=2000]
+                input_list.append(outputList)
+
+            result = getSimilarUsersRecommendations(input_list,item_similarity_matrix,places)
+
+            response = {
+              'userid':intUserId,
+              'recommendations':result
+            }
+            print("Recommended places to user", intUserId, "based on most similar users: ",result)
+            return json.dumps(response)
+        except:
+            print("Could not fetch Similar Users Recommendations")
+            return "Could not fetch Similar Users Recommendations"
 
 # ENDPOINT GET PLACES RECOMMENDATIONS BY MOST SIMILAR USERS
 api.add_resource(GetSimilarUsersRecommendations,'/simusrec')
 
 
+
+# GET TRAINING DATA FROM DATABASE
+
+class Train_Similarity_Matrices(Resource):
+    @cors.crossdomain(origin='*', methods={"HEAD","OPTIONS","GET","POST"})
+    def get(self):
+        try:
+            # FETCH ITEMS DATA
+            url = "http://ec2-34-226-195-132.compute-1.amazonaws.com/api/reviews/all"
+            response = requests.request("GET", url)
+            rows = json.loads(response.text)
+            item_ratings = []
+            for row in rows:
+                item_ratings.append([row['ranking'],row['touristic_place'],row['user']])
+
+            df_itemDataset = pd.DataFrame(item_ratings, columns=['item_rating', 'item_id', 'user_id'])
+            #print(df_itemDataset)
+
+            # FETCH SUBCATEGORIES DATA
+            url = "http://ec2-34-226-195-132.compute-1.amazonaws.com/api/users/getAllPreferenceSubCategories/"
+            response = requests.request("GET",url)
+            rows = json.loads(response.text)
+            subCategory_choices = []
+            for row in rows:
+                aux = []
+                if row['status'] == True:
+                  aux.append(1)
+                else:
+                  aux.append(0)
+                aux.append(row['subcategory'])
+                aux.append(row['user'])
+                subCategory_choices.append(aux)
+
+            df_subCategoryDataset = pd.DataFrame(subCategory_choices, columns=['subCategory_ratings','subCategory_ids','user_ids'])
+            #print(df_subCategoryDataset)
+
+            # BUILD MATRICES
+            user_ratings_matrix, subCategory_ratings_matrix, users_by_subcategory_matrix = buildMatrices(df_itemDataset,
+                                                                                                   df_subCategoryDataset,
+                                                                                                   df_subCategoryDataset)
+
+            # CLEAN NOISE
+            user_ratings_matrix, subCategory_ratings_matrix, users_by_subcategory_matrix = cleanNoise(user_ratings_matrix,
+                                                                                                subCategory_ratings_matrix,
+                                                                                                users_by_subcategory_matrix)
+
+            # TRAIN AND SAVE .pkt FILES
+            item_similarity_matrix, subcategory_similarity_matrix, user_similarity_matrix = computeSimilarityMatrices(user_ratings_matrix,
+                                                                                                                subCategory_ratings_matrix,
+                                                                                                                users_by_subcategory_matrix)
+        except:
+            print("Could not train matrices")
+            return "Could not train matrices"
+
+        return "200"
+
+api.add_resource(Train_Similarity_Matrices, '/trainmatrices')
+
+
 if __name__ == '__main__':
     app.run(debug=True)
 
+    '''
     # FLUJO 1
     # Cargar Datasets
     df_itemDataset = load_dataset('itemDataset.csv')
@@ -333,6 +448,8 @@ if __name__ == '__main__':
                                                                                                               users_by_subcategory_matrix)
     '''
 
+
+    '''
     ###
     # FLUJO 2
     # Cargar matrices de similitud

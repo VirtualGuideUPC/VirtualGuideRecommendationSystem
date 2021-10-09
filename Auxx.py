@@ -182,6 +182,8 @@ if __name__ == '__main__':
                                                                                                               subCategory_ratings_matrix,
                                                                                                               users_by_subcategory_matrix)
 
+
+
     ###
     # FLUJO 2
     # Cargar matrices de similitud
@@ -207,7 +209,6 @@ if __name__ == '__main__':
     ]
     recommended_places = get_similar_places(user_places_ratings, item_similarity_matrix, 5, places, False)
     print("Lugares turísticos recomendados al usuario 'userID':", '\n', recommended_places, '\n')
-
 
 
 

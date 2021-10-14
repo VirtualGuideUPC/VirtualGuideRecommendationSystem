@@ -324,9 +324,12 @@ def getSimilarUsersRecommendations(historicalRatings,item_similarity_matrix,plac
         # API Service: historicalRatings = getHistoricalRatingsFromUsers(<userIDs[]>)
         recommendation_list = []
         for historicalRating in historicalRatings:
-            single_prediction = get_similar_places(historicalRating, item_similarity_matrix, 3, places)
-            for id in single_prediction[:2]:
-                recommendation_list.append(id)
+            try:
+                single_prediction = get_similar_places(historicalRating, item_similarity_matrix, 3, places)
+                for id in single_prediction[:2]:
+                    recommendation_list.append(id)
+            except:
+                pass
         return recommendation_list
 
 class GetSimilarUsersRecommendations(Resource):
@@ -339,14 +342,27 @@ class GetSimilarUsersRecommendations(Resource):
             intUserId=request.json['user_id']
             similar_users=get_similar_users(intUserId,user_similarity_matrix,4)
             similar_users.pop(0)
+            print("Similar Users to user", intUserId,":",similar_users)
 
             item_similarity_matrix=pd.read_pickle('item_similarity_matrix.pkt')
             places=load_dataset('all.csv')
-            ratings = load_dataset('itemDataset.csv')
+
+            # FETCH ITEMS DATA
+            url = "http://ec2-34-226-195-132.compute-1.amazonaws.com/api/reviews/all"
+            response = requests.request("GET", url)
+            rows = json.loads(response.text)
+            item_ratings = []
+            for row in rows:
+                item_ratings.append([row['ranking'], row['touristic_place'], row['user']])
+
+            ratings = pd.DataFrame(item_ratings, columns=['item_rating', 'item_id', 'user_id'])
+            #ratings = load_dataset('itemDataset.csv')
+
 
             input_list=[]
             for i in similar_users:
                 aux_df= ratings[ratings['user_id']==i]
+                print("aux_df", aux_df)
                 aux_df=aux_df.drop('user_id',axis=1)
                 subset=aux_df[['item_id','item_rating']]
                 result=[tuple(x) for x in subset.to_numpy()]

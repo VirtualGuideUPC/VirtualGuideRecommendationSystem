@@ -1,3 +1,5 @@
+import traceback
+
 import pandas as pd
 from flask import Flask, request, session
 from flask_restful import Api, Resource
@@ -112,6 +114,7 @@ get_similar_places(usuario1, item_similarity_matrix, 10, False)
 def get_similar_places(user_data, item_similarity_matrix, size, places, tabulate=False):
   similar_items = pd.DataFrame()
   for item_id, user_rating in user_data:
+    print("ITEM ID:", item_id, " - USER RATING", user_rating)
     similar_score = item_similarity_matrix[item_id]*(user_rating-2.5)
     similar_score = similar_score.sort_values(ascending=False)
     similar_items = similar_items.append(similar_score)
@@ -159,7 +162,8 @@ class GetSimilarPlaces(Resource):
         finalresponse=json.dumps(recommended_places)
         ultimateresponse=json.loads(finalresponse)
         return jsonify(to_dict(ultimateresponse))
-    except:
+    except Exception:
+        print(traceback.format_exc())
         print("Could not fetch Similar Touristic Places")
         return "Could not fetch Similar Touristic Places"
 
@@ -357,7 +361,8 @@ class GetSimilarUsersRecommendations(Resource):
             }
             print("Recommended places to user", intUserId, "based on most similar users: ",result)
             return json.dumps(response)
-        except:
+        except Exception:
+            print(traceback.format_exc())
             print("Could not fetch Similar Users Recommendations")
             return "Could not fetch Similar Users Recommendations"
 
